@@ -275,7 +275,7 @@ int main() {
     if(init_hardware()) return 1;
 
     client porter_client = {0};
-    if(init_client(&porter_client)) return 1;
+    if(init_client(&porter_client, 1, 120, 5)) return 1;
 
     float prev_pres = 0 ,prev_intemp = 0, prev_outtemp = 0, prev_hum = 0, prev_lux = 0;
 
@@ -303,7 +303,7 @@ int main() {
 
             char * topic = "outside/weather";
             char * format = "json";
-            publish(porter_client, topic, format, payload);
+            client_send(&porter_client, topic, format, payload);
 
             prev_pres = ds.pressure;
             prev_intemp = ds.inner_temp;
