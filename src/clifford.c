@@ -203,6 +203,7 @@ void read_interface() {
     int  AIN0_DATA,AIN1_DATA;
     fad=wiringPiI2CSetup(ADS_I2C_ADDRESS);
     if(ADS1015_INIT()!=0x8000) {	
+        close(fad);
 		return ;
 	}
     // AIN0 is dedicated to temp. sensor
@@ -214,6 +215,8 @@ void read_interface() {
     float amps = (AIN1_DATA * AREF / 1024.0) / 10000.0;
     float microamps = amps * 1000000.0;
     ad.lux = microamps * 2.0;
+
+    close(fad);
 }
 
 int init_hardware() {
@@ -274,8 +277,14 @@ struct data_set read_data() {
 int main() {
     if(init_hardware()) return 1;
 
-    client porter_client = {0};
-    if(init_client(&porter_client, 1, 120, 5)) return 1;
+    client * porter_client = (client *)malloc(sizeof(client));
+
+    if(init_client(porter_client, 1, 120, 5) > 0) {
+        printf("failed to initialize client\n");
+        return 1;
+    }
+    
+    printf("initialized message client\n");
 
     float prev_pres = 0 ,prev_intemp = 0, prev_outtemp = 0, prev_hum = 0, prev_lux = 0;
 
@@ -303,7 +312,10 @@ int main() {
 
             char * topic = "outside/weather";
             char * format = "json";
-            client_send(&porter_client, topic, format, payload);
+            if(client_send(porter_client, topic, format, payload))
+                return 1;
+
+            printf("sent message to server\n");
 
             prev_pres = ds.pressure;
             prev_intemp = ds.inner_temp;
